@@ -20,8 +20,128 @@ class BotcCommands(commands.Cog):
         await ctx.send('Playing!')
 
 
-    
+class SetupCommands(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.role_messages = {}
 
+    async def _edit_role_message(self, payload, user_id: int, add: bool):
+        message = self.role_messages.get(payload.message_id)
+        if message is None:
+            channel = self.bot.get_channel(payload.channel_id)
+            if channel is not None:
+                try:
+                    message = await channel.fetch_message(payload.message_id)
+                except Exception:
+                    return
+        if message is None:
+            return
+
+        lines = message.content.splitlines()
+        header_index = None
+        for i, line in enumerate(lines):
+            if line.strip().lower().startswith('players'):
+                header_index = i
+                break
+
+        if header_index is None:
+            return
+
+        players_section = lines[header_index + 1 :]
+        mention = f"<@{user_id}>"
+        if add:
+            entry = f"- {mention}"
+            if entry not in players_section:
+                new_content_lines = lines[: header_index + 1] + players_section + [entry]
+                content = "\n".join(new_content_lines)
+            else:
+                content = message.content
+        else:
+            def line_matches(l: str) -> bool:
+                return mention in l or l.strip().endswith(f"{user_id}")
+
+            new_players = [l for l in players_section if not line_matches(l)]
+            content = "\n".join(lines[: header_index + 1] + new_players)
+
+        if content != message.content:
+            try:
+                message = await message.edit(content=content)
+                self.role_messages[payload.message_id] = message
+            except Exception:
+                return
+
+    @commands.command(name='create')
+    async def create(self, ctx):
+        message = await ctx.send('Creating game!\nPlayers:')
+        await message.add_reaction(SIGNUP_EMOJI)
+        self.role_messages[message.id] = message
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_add(self, payload):
+        if payload.user_id == self.bot.user.id:
+            return
+
+        if payload.emoji.name != SIGNUP_EMOJI and str(payload.emoji) != SIGNUP_EMOJI:
+            return
+
+        if payload.message_id not in self.role_messages:
+            return
+
+        guild = self.bot.get_guild(payload.guild_id)
+        if guild is None:
+            return
+
+        member = guild.get_member(payload.user_id)
+        if member is None:
+            try:
+                member = await guild.fetch_member(payload.user_id)
+            except Exception:
+                return
+
+        role = discord.utils.get(guild.roles, name=player_role)
+        if role is None:
+            return
+
+        try:
+            await member.add_roles(role, reason='Joined game via reaction')
+        except Exception:
+            pass
+
+        await self._edit_role_message(payload, payload.user_id, True)
+
+    @commands.Cog.listener()
+    async def on_raw_reaction_remove(self, payload):
+        if payload.user_id == self.bot.user.id:
+            return
+
+        if payload.emoji.name != SIGNUP_EMOJI and str(payload.emoji) != SIGNUP_EMOJI:
+            return
+
+        if payload.message_id not in self.role_messages:
+            return
+
+        guild = self.bot.get_guild(payload.guild_id)
+        if guild is None:
+            return
+
+        member = guild.get_member(payload.user_id)
+        if member is None:
+            try:
+                member = await guild.fetch_member(payload.user_id)
+            except Exception:
+                return
+
+        role = discord.utils.get(guild.roles, name=player_role)
+        if role is None:
+            return
+
+        try:
+            if role in member.roles:
+                await member.remove_roles(role, reason='Left game via reaction removal')
+        except Exception:
+            pass
+
+        await self._edit_role_message(payload, payload.user_id, False)
 
 
 #day commands

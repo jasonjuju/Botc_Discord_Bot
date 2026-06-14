@@ -6,13 +6,13 @@ SIGNUP_EMOJI = "✅"
 player_role = "Player"
 
 class BotcCommands(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot, players):
         self.bot = bot
-        self.players = set()
+        self.players = players
         self.signup_message_id = None
         self.signup_role_id = None
 
-    
+        print(players)
 
 
     @commands.command(name='play')
@@ -23,7 +23,11 @@ class BotcCommands(commands.Cog):
 class SetupCommands(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.players = set()
         self.role_messages = {}
+
+    def get_players(self):
+        return self.players
 
     async def _edit_role_message(self, payload, user_id: int, add: bool):
         message = self.role_messages.get(payload.message_id)
@@ -106,7 +110,8 @@ class SetupCommands(commands.Cog):
             await member.add_roles(role, reason='Joined game via reaction')
         except Exception:
             pass
-
+        
+        self.players.add(payload.user_id)
         await self._edit_role_message(payload, payload.user_id, True)
 
     @commands.Cog.listener()
@@ -141,7 +146,29 @@ class SetupCommands(commands.Cog):
         except Exception:
             pass
 
+        self.players.discard(payload.user_id)
         await self._edit_role_message(payload, payload.user_id, False)
+
+
+    #run a test game with 8 players
+    @commands.command(name='runtest')
+    async def runtest(self, ctx):
+        self.players = [f"Player {i}" for i in range(1, 9)]
+        content = "Creating game!\nPlayers:\n" + "\n".join(f"- {name}" for name in self.players)
+        message = await ctx.send(content)
+        self.role_messages[message.id] = message
+
+    @commands.command(name='loadgame')
+    async def loadgame(self, ctx):
+        players = self.get_players()
+        if not players:
+            await ctx.send("No players have joined the game yet.")
+            return
+        
+
+        await self.bot.add_cog(BotcCommands(self.bot, players))
+
+        await self.bot.remove_cog('SetupCommands')
 
 
 #day commands

@@ -1,19 +1,30 @@
 import discord
 from discord.ext import commands
+import botc_characters
 
 SIGNUP_EMOJI = "✅"
 
 player_role = "Player"
 
 class BotcCommands(commands.Cog):
+    
     def __init__(self, bot, players):
         self.bot = bot
         self.players = players
         self.signup_message_id = None
         self.signup_role_id = None
 
-        print(players)
+        self.script = botc_characters.test_script #change later
 
+        
+
+
+    def assign_player_characters(self):
+        
+        character_pool = botc_characters.test_script
+        assigned_characters = {}
+        
+        return assigned_characters
 
     @commands.command(name='play')
     async def pla_command(self, ctx):

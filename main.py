@@ -20,7 +20,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 async def main():
     await bot.add_cog(SetupCommands(bot))
-    await bot.start(token) #, log_handler=handler, log_level=logging.DEBUG
+    await bot.start(token)
 
 
 @bot.event
@@ -35,8 +35,11 @@ async def startgame(ctx):
 
 @bot.command()
 async def stop(ctx):
+    
+    for cog_name in list(bot.cogs):
+        await bot.remove_cog(cog_name)
+
     await ctx.send('Goodbye!')
-    await bot.remove_cog('SetupCommands')
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,7 +1,7 @@
 
 from enum import Enum
 
-Allignment = Enum('Townsfolk', 'Outsider', 'Minion', 'Demon') #Could add traveler later
+Allignment = Enum('Allignment', 'Townsfolk Outsider Minion Demon') #Could add traveler later
 
 class BotcCharacter:
     def __init__(self, name, priority=0, allignment=Allignment.Townsfolk):

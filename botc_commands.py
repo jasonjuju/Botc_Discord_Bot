@@ -1,22 +1,39 @@
 import discord
 from discord.ext import commands
 import botc_characters
+import random
 
 SIGNUP_EMOJI = "✅"
 
 player_role = "Player"
 
+
+async def send_dm(ctx, member: discord.Member, *, content):
+    channel = await member.create_dm()
+    await channel.send(content)
+
+
+class Player:
+    def __init__(self, name):
+
+        self.name = name
+        self.character = None
+        self.is_alive = True
+        self.used_ghost_vote = False
+
+
 class BotcCommands(commands.Cog):
     
     def __init__(self, bot, players):
         self.bot = bot
+        random.shuffle(players)
         self.players = players
         self.signup_message_id = None
         self.signup_role_id = None
 
         self.script = botc_characters.test_script #change later
 
-        
+        print("BotcCommands initialized with players:", self.players)
 
 
     def assign_player_characters(self):
@@ -28,7 +45,10 @@ class BotcCommands(commands.Cog):
 
     @commands.command(name='play')
     async def pla_command(self, ctx):
-        await ctx.send('Playing!')
+        
+
+        content = '```Players in random order:\n' + '\n'.join(self.players) + '```'
+        await send_dm(ctx, ctx.author, content=content)
 
 
 class SetupCommands(commands.Cog):

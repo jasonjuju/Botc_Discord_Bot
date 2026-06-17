@@ -22,7 +22,6 @@ async def main():
     await bot.add_cog(SetupCommands(bot))
     await bot.start(token)
 
-
 @bot.event
 async def on_ready():
     print('Bot is ready.')
@@ -35,7 +34,6 @@ async def startgame(ctx):
 
 @bot.command()
 async def stop(ctx):
-    
     for cog_name in list(bot.cogs):
         await bot.remove_cog(cog_name)
 

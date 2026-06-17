@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands
 import botc_characters
@@ -21,13 +22,20 @@ class Player:
         self.is_alive = True
         self.used_ghost_vote = False
 
+    def get_name(self):
+        return self.name
+
 
 class BotcCommands(commands.Cog):
     
     def __init__(self, bot, players):
         self.bot = bot
         random.shuffle(players)
-        self.players = players
+
+        self.players = []
+
+        self.setup_players(players)
+        
         self.signup_message_id = None
         self.signup_role_id = None
 
@@ -35,19 +43,76 @@ class BotcCommands(commands.Cog):
 
         print("BotcCommands initialized with players:", self.players)
 
+    def setup_players(self, players):
+
+        for player in players:
+            player_obj = Player(player)
+            self.players.append(player_obj)
+
+    def get_available_characters(self):
+        used = {player.character for player in self.players if player.character}
+        return [character for character in self.script if character not in used]
+
+    def format_character_choices(self, characters):
+        return '\n'.join(f'{index}. {character.name}' for index, character in enumerate(characters, start=1))
+
+    async def prompt_character_selection(self, ctx, player, available_characters):
+        prompt = (
+            f'Select a character for {player.get_name()}:\n'
+            f'{self.format_character_choices(available_characters)}\n'
+            'Reply with the number of the chosen character.'
+        )
+        await send_dm(ctx, ctx.author, content=prompt)
+
+        def check(message: discord.Message):
+            return message.author == ctx.author and isinstance(message.channel, discord.DMChannel)
+
+        while True:
+            try:
+                response = await self.bot.wait_for('message', check=check, timeout=120)
+            except asyncio.TimeoutError:
+                await send_dm(ctx, ctx.author, content='Character selection timed out.')
+                return None
+
+            choice = response.content.strip()
+            if choice.isdigit():
+                index = int(choice) - 1
+                if 0 <= index < len(available_characters):
+                    return available_characters[index]
+
+            await send_dm(ctx, ctx.author, content='Invalid choice. Please send the number of one of the available characters.')
+
+    @commands.command(name='select_characters')
+    async def select_characters(self, ctx):
+        if not self.players:
+            await send_dm(ctx, ctx.author, content='No players are currently assigned.')
+            return
+
+        for player in self.players:
+            available_characters = self.get_available_characters()
+            if not available_characters:
+                break
+
+            chosen = await self.prompt_character_selection(ctx, player, available_characters)
+            if chosen is None:
+                return
+
+            player.character = chosen
+            await send_dm(ctx, ctx.author, content=f'{player.get_name()} is now assigned {chosen.name}.')
+
+        summary_lines = [f'{player.get_name()}: {player.character.name if player.character else "(none)"}' for player in self.players]
+        summary = 'Character assignment complete:\n' + '\n'.join(summary_lines)
+        await send_dm(ctx, ctx.author, content=summary)
 
     def assign_player_characters(self):
-        
         character_pool = botc_characters.test_script
         assigned_characters = {}
-        
         return assigned_characters
 
     @commands.command(name='play')
     async def pla_command(self, ctx):
-        
-
-        content = '```Players in random order:\n' + '\n'.join(self.players) + '```'
+        player_names = [player.get_name() for player in self.players]
+        content = '```\n' + '\n'.join(player_names) + '\n```'
         await send_dm(ctx, ctx.author, content=content)
 
 

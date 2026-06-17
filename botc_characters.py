@@ -46,4 +46,8 @@ class TestCharacter8(BotcCharacter):
     def __init__(self):
         super().__init__("Test Character 8", priority=8, allignment=Allignment.Demon)
 
-test_script = [TestCharacter1(), TestCharacter2(), TestCharacter3(), TestCharacter4(), TestCharacter5(), TestCharacter6(), TestCharacter7(), TestCharacter8()]
+class TestCharacter9(BotcCharacter):
+    def __init__(self):
+        super().__init__("Test Character 9", priority=9, allignment=Allignment.Townsfolk)
+
+test_script = [TestCharacter1(), TestCharacter2(), TestCharacter3(), TestCharacter4(), TestCharacter5(), TestCharacter6(), TestCharacter7(), TestCharacter8(), TestCharacter9()]

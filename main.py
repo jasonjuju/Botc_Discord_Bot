@@ -7,6 +7,12 @@ import os
 
 import botc_commands
 from botc_commands import SetupCommands
+from botc_session import game_session
+
+
+        
+
+
 
 load_dotenv()
 token = os.getenv('DISCORD_TOKEN')
@@ -19,7 +25,9 @@ intents.members = True
 bot = commands.Bot(command_prefix='!', intents=intents)
 
 async def main():
-    await bot.add_cog(SetupCommands(bot))
+    session = game_session()
+
+    await bot.add_cog(SetupCommands(bot, session))
     await bot.start(token)
 
 @bot.event

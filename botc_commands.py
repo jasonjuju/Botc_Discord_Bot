@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 import botc_characters
 import random
+from botc_session import game_session
 
 SIGNUP_EMOJI = "✅"
 
@@ -21,20 +22,33 @@ class Player:
         self.character = None
         self.is_alive = True
         self.used_ghost_vote = False
+        self.poisoned = False
 
     def get_name(self):
         return self.name
+    
+    def set_character(self, character):
+        self.character = character
+
+    #Change if soldier
+    def kill(self):
+        self.is_alive = False
+
+    def revive(self):
+        self.is_alive = True
+
 
 
 class BotcCommands(commands.Cog):
     
-    def __init__(self, bot, players):
+    def __init__(self, bot, session):
         self.bot = bot
-        random.shuffle(players)
+        self.session = session
+        random.shuffle(self.session.players)
 
         self.players = []
 
-        self.setup_players(players)
+        self.setup_players(self.session.players)
         
         self.signup_message_id = None
         self.signup_role_id = None
@@ -42,6 +56,9 @@ class BotcCommands(commands.Cog):
         self.script = botc_characters.test_script #change later
 
         print("BotcCommands initialized with players:", self.players)
+
+    
+
 
     def setup_players(self, players):
 
@@ -97,7 +114,7 @@ class BotcCommands(commands.Cog):
             if chosen is None:
                 return
 
-            player.character = chosen
+            player.set_character(chosen)
             await send_dm(ctx, ctx.author, content=f'{player.get_name()} is now assigned {chosen.name}.')
 
         summary_lines = [f'{player.get_name()}: {player.character.name if player.character else "(none)"}' for player in self.players]
@@ -117,13 +134,13 @@ class BotcCommands(commands.Cog):
 
 
 class SetupCommands(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot, session):
         self.bot = bot
-        self.players = set()
+        self.session = session
         self.role_messages = {}
 
     def get_players(self):
-        return self.players
+        return self.session.players
 
     async def _edit_role_message(self, payload, user_id: int, add: bool):
         message = self.role_messages.get(payload.message_id)
@@ -207,7 +224,7 @@ class SetupCommands(commands.Cog):
         except Exception:
             pass
         
-        self.players.add(payload.user_id)
+        self.session.players.append(payload.user_id)
         await self._edit_role_message(payload, payload.user_id, True)
 
     @commands.Cog.listener()
@@ -242,15 +259,15 @@ class SetupCommands(commands.Cog):
         except Exception:
             pass
 
-        self.players.discard(payload.user_id)
+        self.session.players.remove(payload.user_id)
         await self._edit_role_message(payload, payload.user_id, False)
 
 
     #run a test game with 8 players
     @commands.command(name='runtest')
     async def runtest(self, ctx):
-        self.players = [f"Player {i}" for i in range(1, 9)]
-        content = "Creating game!\nPlayers:\n" + "\n".join(f"- {name}" for name in self.players)
+        self.session.players = [f"Player {i}" for i in range(1, 9)]
+        content = "Creating game!\nPlayers:\n" + "\n".join(f"- {name}" for name in self.session.players)
         message = await ctx.send(content)
         self.role_messages[message.id] = message
 

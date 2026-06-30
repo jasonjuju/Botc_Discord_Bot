@@ -279,7 +279,8 @@ class SetupCommands(commands.Cog):
             return
         
 
-        await self.bot.add_cog(BotcCommands(self.bot, players))
+
+        await self.bot.add_cog(BotcCommands(self.bot, self.session))
 
         await self.bot.remove_cog('SetupCommands')
 
